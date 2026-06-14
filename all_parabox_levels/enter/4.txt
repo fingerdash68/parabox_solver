@@ -6,16 +6,16 @@ x . 3 . p . x
 x . . . . . x
 x x x x x x x
 
-x x x
-x x .-
-x x x
-
-x x x
-x x .-
-x x x
-
 x x x x x
 x . . . x
 x .=. . .
 x . . . x
 x x x x x
+
+x x x
+x x .-
+x x x
+
+x x x
+x x .-
+x x x

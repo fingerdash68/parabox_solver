@@ -526,10 +526,12 @@ vector<string> find_best_path(Level &level)
         d++;
         for (long long int hash : aFaire)
         {
+            cout << "current hash : " << hash << "\n";
             for (int idir = 0; idir < DIR.size(); idir++)
             {
                 vector<int> dir = DIR[idir];
                 level.set_from_hash(hash);
+                if (idir == 0) cout << level;
                 level.move_player(dir[0], dir[1]);
                 long long int next_hash = level.hash();
                 if (dist.count(next_hash) == 0)
@@ -569,19 +571,18 @@ int main()
     Level whole_level = ask_for_level();
     cout << whole_level;
     // whole_level.set_from_hash(424213776);
-    // cout << whole_level;
-    // cout << "MOVE 1 : " << whole_level.move_player(0, 1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 2 : " << whole_level.move_player(-1, 0) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 3 : " << whole_level.move_player(-1, 0) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 4 : " << whole_level.move_player(-1, 0) << "\n\n";
-    // cout << whole_level;
-    long long int tps_dep = get_ms();
-    vector<string> best_path = find_best_path(whole_level);
-    long long int tps_fin = get_ms();
+    cout << "MOVE 1 : " << whole_level.move_player(0, -1) << "\n\n";
+    cout << whole_level;
+    cout << "MOVE 2 : " << whole_level.move_player(0, -1) << "\n\n";
+    cout << whole_level;
+    cout << "MOVE 3 : " << whole_level.move_player(0, -1) << "\n\n";
+    cout << whole_level;
+    cout << "MOVE 4 : " << whole_level.move_player(0, -1) << "\n\n";
+    cout << whole_level;
+    // long long int tps_dep = get_ms();
+    // vector<string> best_path = find_best_path(whole_level);
+    // long long int tps_fin = get_ms();
 
-    cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
-    cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
+    // cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
+    // cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
 }
