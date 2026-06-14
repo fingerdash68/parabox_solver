@@ -235,13 +235,13 @@ struct Box
         {
             bool me_had_player_end = has_player_end;
             bool me_had_box_end = has_box_end;
-            if (box->grid[Nlig][Ncol]->has_player_end) has_player_end = true;
-            if (box->grid[Nlig][Ncol]->has_box_end) has_box_end = true;
+            has_player_end = box->grid[Nlig][Ncol]->has_player_end;
+            has_box_end = box->grid[Nlig][Ncol]->has_box_end;
             delete box->grid[Nlig][Ncol];
             box->grid[Nlig][Ncol] = this;
             container->grid[lig][col] = EmptyBox(container, lig, col);
-            if (me_had_player_end) container->grid[lig][col]->has_player_end = true;
-            if (me_had_box_end) container->grid[lig][col]->has_box_end = true;
+            container->grid[lig][col]->has_player_end = me_had_player_end;
+            container->grid[lig][col]->has_box_end = me_had_box_end;
             container = box;
             lig = Nlig;
             col = Ncol;
@@ -486,9 +486,9 @@ ostream& operator<<(ostream& ost, const Level &level)
 {
     ost << "UNIVERSE PRINT :\n";
     ost << level.universe;
-    ost << "PLAYER PRINT :\n";
-    ost << "pos = (" << level.player->lig << "," << level.player->col << ")\n";
-    ost << level.player->container;
+    // ost << "PLAYER PRINT :\n";
+    // ost << "pos = (" << level.player->lig << "," << level.player->col << ")\n";
+    // ost << level.player->container;
     // ost << "PLAYER END PRINT :\n";
     // ost << "pos = (" << level.player_end.lig << "," << level.player_end.col << ")\n";
     // ost << level.player_end.box;
@@ -546,8 +546,8 @@ vector<string> find_best_path(Level &level)
         aRajouter.clear();
     }
 
-    // level.set_from_hash(finish_found);
-    // cout << "FINISH :\n" << level << "\n";
+    level.set_from_hash(finish_found);
+    cout << "FINISH :\n" << level << "\n";
 
     // Calculate found path
     level.set_from_hash(start_hash);
@@ -581,8 +581,6 @@ int main()
     long long int tps_dep = get_ms();
     vector<string> best_path = find_best_path(whole_level);
     long long int tps_fin = get_ms();
-
-    cout << "AFTER BEST PATH :\n" << whole_level;
 
     cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
     cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
