@@ -38,6 +38,35 @@ ostream& operator<<(ostream &ost, const vector<vector<T>> &tab)
     return ost;
 }
 
+bool contains(const string &s, char c)
+{
+    for (char v : s)
+    {
+        if (v == c) return true;
+    }
+    return false;
+}
+
+vector<string> split(const string &s, char c)
+{
+    vector<string> ans;
+    string current = "";
+    for (char v : s)
+    {
+        if (v == c)
+        {
+            ans.push_back(current);
+            current = "";
+        }
+        else
+        {
+            current += v;
+        }
+    }
+    ans.push_back(current);
+    return ans;
+}
+
 struct Box
 {
     enum Type {
@@ -46,12 +75,15 @@ struct Box
         PLAYER,
         SIMPLE_BOX,
         UNIVERSE,
-        LEVEL
+        LEVEL,
+        INFINITE_LEVEL
     };
 
     Type type;
     vector<vector<Box*>> grid;
     Box* container;
+    Box* reference_to; // For infinite level
+    int infinity; // For infinite level
     int lig;
     int col;
     bool has_player_end;
@@ -62,6 +94,8 @@ struct Box
         type{_type},
         grid{_grid},
         container{_cont},
+        reference_to{nullptr},
+        infinity{-1},
         lig{_lig},
         col{_col},
         has_player_end{false},
@@ -100,12 +134,12 @@ struct Box
 
     bool is_eatable() const
     {
-        return type == LEVEL || type == PLAYER || type == SIMPLE_BOX;
+        return type == LEVEL || type == PLAYER || type == SIMPLE_BOX || type == INFINITE_LEVEL;
     }
 
     bool is_movable() const
     {
-        return type == LEVEL || type == PLAYER || type == SIMPLE_BOX;
+        return type == LEVEL || type == PLAYER || type == SIMPLE_BOX || type == INFINITE_LEVEL;
     }
 
     bool is_container() const
@@ -115,7 +149,7 @@ struct Box
 
     bool counts_for_box_end() const
     {
-        return type == LEVEL || type == SIMPLE_BOX;
+        return type == LEVEL || type == SIMPLE_BOX || type == INFINITE_LEVEL;
     }
 
     // SETTERS
@@ -193,6 +227,14 @@ struct Box
             for (int col = 0; col < width; col++)
                 level->grid[lig][col] = EmptyBox(level, lig, col);
         return level;
+    }
+
+    static Box* InfiniteLevel(Box* _ref, int _infinity = 0, Box* _cont = nullptr, int _lig = -1, int _col = -1)
+    {
+        Box* inf = new Box(INFINITE_LEVEL, {}, _cont, _lig, _col, _ref->name + "+" + to_string(_infinity));
+        inf->infinity = _infinity;
+        inf->reference_to = _ref;
+        return inf;
     }
 
     // ACTIONS
@@ -404,15 +446,37 @@ Level ask_for_level()
                         new_box = Box::SimpleBox(box, lig, col);
                         whole_level.all_movables.push_back(new_box);
                     }
+                    else if (contains(name, '+'))
+                    {
+                        vector<string> split_name = split(name, '+');
+                        string name = split_name[0];
+                        int infinity = atoi(split_name[1].c_str());
+                        Box* ref_box;
+                        if (asked.count(name) == 0)
+                        {
+                            ref_box = Box::Level(0, 0, name, box, lig, col);
+                            to_ask.push_back(ref_box);
+                            whole_level.all_movables.push_back(ref_box);
+                        }
+                        else ref_box = asked[name];
+                        new_box = Box::InfiniteLevel(ref_box, infinity, box, lig, col);
+                        whole_level.all_movables.push_back(new_box);
+                    }
                     else
                     {
                         if (asked.count(name) == 0)
                         {
                             new_box = Box::Level(0, 0, name, box, lig, col);
                             to_ask.push_back(new_box);
-                            whole_level.all_movables.push_back(new_box);
                         }
-                        else new_box = asked[name];
+                        else
+                        {
+                            new_box = asked[name];
+                            new_box->container = box;
+                            new_box->lig = lig;
+                            new_box->col = col;
+                        }
+                        whole_level.all_movables.push_back(new_box);
                     }
                     if (c == '=')
                     {
@@ -472,6 +536,7 @@ ostream& operator<<(ostream& ost, Box* top_box)
                     else if (child->has_box_end) ost << "-";
                     else ost << " ";
                     if (child->type == Box::LEVEL && printed.count(child) == 0) to_print.push_back(child);
+                    if (child->type == Box::INFINITE_LEVEL && printed.count(child->reference_to) == 0) to_print.push_back(child->reference_to);
                 }
                 else ost << "  ";
             }
@@ -524,15 +589,18 @@ vector<string> find_best_path(Level &level)
     while (finish_found == -1 && !aFaire.empty())
     {
         d++;
+        cout << "current d : " << d << endl;
         for (long long int hash : aFaire)
         {
-            cout << "current hash : " << hash << "\n";
+            cout << "current hash : " << hash << endl;
             for (int idir = 0; idir < DIR.size(); idir++)
             {
                 vector<int> dir = DIR[idir];
                 level.set_from_hash(hash);
+                cout << "idir = " << idir << endl;
                 if (idir == 0) cout << level;
                 level.move_player(dir[0], dir[1]);
+                cout << "after move" << endl;
                 long long int next_hash = level.hash();
                 if (dist.count(next_hash) == 0)
                 {
@@ -542,14 +610,19 @@ vector<string> find_best_path(Level &level)
                     aRajouter.push_back(next_hash);
                     if (level.is_finished()) finish_found = next_hash;
                 }
+                cout << "after dist.count" << endl;
             }
         }
         aFaire = aRajouter;
         aRajouter.clear();
+        cout << "after aRajouter" << endl;
     }
 
-    level.set_from_hash(finish_found);
-    cout << "FINISH :\n" << level << "\n";
+    if (finish_found != -1)
+    {
+        level.set_from_hash(finish_found);
+        cout << "FINISH :\n" << level << "\n";
+    }
 
     // Calculate found path
     level.set_from_hash(start_hash);
@@ -571,18 +644,23 @@ int main()
     Level whole_level = ask_for_level();
     cout << whole_level;
     // whole_level.set_from_hash(424213776);
-    cout << "MOVE 1 : " << whole_level.move_player(0, -1) << "\n\n";
-    cout << whole_level;
-    cout << "MOVE 2 : " << whole_level.move_player(0, -1) << "\n\n";
-    cout << whole_level;
-    cout << "MOVE 3 : " << whole_level.move_player(0, -1) << "\n\n";
-    cout << whole_level;
-    cout << "MOVE 4 : " << whole_level.move_player(0, -1) << "\n\n";
-    cout << whole_level;
-    // long long int tps_dep = get_ms();
-    // vector<string> best_path = find_best_path(whole_level);
-    // long long int tps_fin = get_ms();
+    // cout << "MOVE 1 : " << whole_level.move_player(0, -1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 2 : " << whole_level.move_player(0, -1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 3 : " << whole_level.move_player(0, -1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 4 : " << whole_level.move_player(0, -1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 5 : " << whole_level.move_player(0, 1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 6 : " << whole_level.move_player(0, 1) << "\n\n";
+    // cout << whole_level;
 
-    // cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
-    // cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
+    long long int tps_dep = get_ms();
+    vector<string> best_path = find_best_path(whole_level);
+    long long int tps_fin = get_ms();
+
+    cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
+    cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
 }
