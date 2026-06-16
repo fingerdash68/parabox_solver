@@ -456,7 +456,6 @@ Level ask_for_level()
                         {
                             ref_box = Box::Level(0, 0, name, box, lig, col);
                             to_ask.push_back(ref_box);
-                            whole_level.all_movables.push_back(ref_box);
                         }
                         else ref_box = asked[name];
                         new_box = Box::InfiniteLevel(ref_box, infinity, box, lig, col);
@@ -589,18 +588,13 @@ vector<string> find_best_path(Level &level)
     while (finish_found == -1 && !aFaire.empty())
     {
         d++;
-        cout << "current d : " << d << endl;
         for (long long int hash : aFaire)
         {
-            cout << "current hash : " << hash << endl;
             for (int idir = 0; idir < DIR.size(); idir++)
             {
                 vector<int> dir = DIR[idir];
                 level.set_from_hash(hash);
-                cout << "idir = " << idir << endl;
-                if (idir == 0) cout << level;
                 level.move_player(dir[0], dir[1]);
-                cout << "after move" << endl;
                 long long int next_hash = level.hash();
                 if (dist.count(next_hash) == 0)
                 {
@@ -610,12 +604,10 @@ vector<string> find_best_path(Level &level)
                     aRajouter.push_back(next_hash);
                     if (level.is_finished()) finish_found = next_hash;
                 }
-                cout << "after dist.count" << endl;
             }
         }
         aFaire = aRajouter;
         aRajouter.clear();
-        cout << "after aRajouter" << endl;
     }
 
     if (finish_found != -1)
