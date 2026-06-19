@@ -84,6 +84,7 @@ struct Box
     Box* container;
     Box* reference_to; // For infinite level
     int infinity; // For infinite level
+    Box* infinite_container; // Infinite version
     int lig;
     int col;
     bool has_player_end;
@@ -96,6 +97,7 @@ struct Box
         container{_cont},
         reference_to{nullptr},
         infinity{-1},
+        infinite_container{nullptr},
         lig{_lig},
         col{_col},
         has_player_end{false},
@@ -237,6 +239,13 @@ struct Box
         return inf;
     }
 
+    static Box* InfiniteLevel(const string &base_name, int _infinity = 0, Box* _cont = nullptr, int _lig = -1, int _col = -1)
+    {
+        Box* inf = new Box(INFINITE_LEVEL, {}, _cont, _lig, _col, base_name + "+" + to_string(_infinity));
+        inf->infinity = _infinity;
+        return inf;
+    }
+
     // ACTIONS
     bool is_in_grid(int l, int c) const
     {
@@ -261,9 +270,18 @@ struct Box
         int Nlig = lig + dlig, Ncol = col + dcol;
         while (!Ncontainer->is_in_grid(Nlig, Ncol))
         {
-            Nlig = Ncontainer->lig + dlig;
-            Ncol = Ncontainer->col + dcol;
-            Ncontainer = Ncontainer->container;
+            if (Ncontainer->container != this)
+            {
+                Nlig = Ncontainer->lig + dlig;
+                Ncol = Ncontainer->col + dcol;
+                Ncontainer = Ncontainer->container;
+            }
+            else
+            {
+                Nlig = infinite_container->lig + dlig;
+                Ncol = infinite_container->col + dcol;
+                Ncontainer = infinite_container->container;
+            }
         }
         bool can_enter = enter_cell(Ncontainer, Nlig, Ncol, dlig, dcol);
         return can_enter;
@@ -448,17 +466,48 @@ Level ask_for_level()
                     }
                     else if (contains(name, '+'))
                     {
-                        vector<string> split_name = split(name, '+');
-                        string name = split_name[0];
-                        int infinity = atoi(split_name[1].c_str());
-                        Box* ref_box;
-                        if (asked.count(name) == 0)
+                        if (asked.count(name))
                         {
-                            ref_box = Box::Level(0, 0, name, box, lig, col);
-                            to_ask.push_back(ref_box);
+                            new_box = asked[name];
+                            new_box->container = box;
+                            new_box->lig = lig;
+                            new_box->col = col;
                         }
-                        else ref_box = asked[name];
-                        new_box = Box::InfiniteLevel(ref_box, infinity, box, lig, col);
+                        else
+                        {
+                            vector<string> split_name = split(name, '+');
+                            string base_name = split_name[0];
+                            int infinity = atoi(split_name[1].c_str());
+                            bool next_missing = true;
+                            Box* top_box = Box::InfiniteLevel(base_name, infinity, box, lig, col);
+                            new_box = top_box;
+                            while (next_missing)
+                            {
+                                Box* ref_box;
+                                string ref_name = base_name;
+                                if (infinity > 1) ref_name = base_name + "+" + to_string(infinity-1);
+                                if (asked.count(ref_name) > 0)
+                                {
+                                    ref_box = asked[ref_name];
+                                    next_missing = false;
+                                }
+                                else
+                                {
+                                    if (infinity == 1)
+                                    {
+                                        ref_box = Box::Level(0, 0, base_name);
+                                        to_ask.push_back(ref_box);
+                                    }
+                                    else ref_box = Box::InfiniteLevel(base_name, infinity-1);
+                                    asked[ref_name] = ref_box;
+                                }
+                                ref_box->infinite_container = top_box;
+                                top_box->reference_to = ref_box;
+                                top_box = ref_box;
+                                infinity--;
+                                if (infinity <= 0) next_missing = false;
+                            }
+                        }
                         whole_level.all_movables.push_back(new_box);
                     }
                     else
@@ -515,14 +564,13 @@ Level ask_for_level()
 
 ostream& operator<<(ostream& ost, Box* top_box)
 {
-    set<Box*> printed;
+    set<Box*> printed = {top_box};
     vector<Box*> to_print = {top_box};
     while (!to_print.empty())
     {
         Box* box = to_print.back();
         to_print.pop_back();
-        printed.insert(box);
-        ost << box->name << " (" << box->lig << "," << box->col << ") :\n";
+        ost << box->name << " (" << (box->container ? box->container->name : "null") << "; " << box->lig << "," << box->col << ") :\n";
         for (int lig = 0; lig < box->height(); lig++)
         {
             for (int col = 0; col < box->width(); col++)
@@ -534,8 +582,16 @@ ostream& operator<<(ostream& ost, Box* top_box)
                     if (child->has_player_end) ost << "=";
                     else if (child->has_box_end) ost << "-";
                     else ost << " ";
-                    if (child->type == Box::LEVEL && printed.count(child) == 0) to_print.push_back(child);
-                    if (child->type == Box::INFINITE_LEVEL && printed.count(child->reference_to) == 0) to_print.push_back(child->reference_to);
+                    if (child->type == Box::LEVEL && printed.count(child) == 0)
+                    {
+                        to_print.push_back(child);
+                        printed.insert(child);
+                    }
+                    if (child->type == Box::INFINITE_LEVEL && printed.count(child->reference_to) == 0)
+                    {
+                        to_print.push_back(child->reference_to);
+                        printed.insert(child->reference_to);
+                    }
                 }
                 else ost << "  ";
             }
@@ -647,6 +703,10 @@ int main()
     // cout << "MOVE 5 : " << whole_level.move_player(0, 1) << "\n\n";
     // cout << whole_level;
     // cout << "MOVE 6 : " << whole_level.move_player(0, 1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 7 : " << whole_level.move_player(0, 1) << "\n\n";
+    // cout << whole_level;
+    // cout << "MOVE 8 : " << whole_level.move_player(0, 1) << "\n\n";
     // cout << whole_level;
 
     long long int tps_dep = get_ms();
