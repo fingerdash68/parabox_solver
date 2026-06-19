@@ -610,11 +610,11 @@ vector<string> find_best_path(Level &level)
         aRajouter.clear();
     }
 
-    if (finish_found != -1)
-    {
-        level.set_from_hash(finish_found);
-        cout << "FINISH :\n" << level << "\n";
-    }
+    // if (finish_found != -1)
+    // {
+    //     level.set_from_hash(finish_found);
+    //     cout << "FINISH :\n" << level << "\n";
+    // }
 
     // Calculate found path
     level.set_from_hash(start_hash);
