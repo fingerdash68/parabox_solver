@@ -646,10 +646,13 @@ vector<string> find_best_path(Level &level)
         d++;
         for (long long int hash : aFaire)
         {
+            cout << "current hash : " << hash << endl;
             for (int idir = 0; idir < DIR.size(); idir++)
             {
                 vector<int> dir = DIR[idir];
                 level.set_from_hash(hash);
+                cout << "dir = " << idir << endl;
+                if (idir == 0) cout << level << endl;
                 level.move_player(dir[0], dir[1]);
                 long long int next_hash = level.hash();
                 if (dist.count(next_hash) == 0)
