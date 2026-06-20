@@ -742,19 +742,19 @@ int main()
 {
     Level whole_level = ask_for_level();
     cout << whole_level;
-    string moves = "WWWWSWWNEEEEEEE";
-    for (int i = 0; i < moves.size(); i++)
-    {
-        char move = moves[i];
-        vector<int> dir = DIR[NAME_TO_NUM_DIR[move]];
-        cout << "MOVE " << i+1 << " : " << whole_level.move_player(dir[0], dir[1]) << "\n\n";
-        cout << whole_level;
-    }
+    // string moves = "WWWWSWWNEEEEEEE";
+    // for (int i = 0; i < moves.size(); i++)
+    // {
+    //     char move = moves[i];
+    //     vector<int> dir = DIR[NAME_TO_NUM_DIR[move]];
+    //     cout << "MOVE " << i+1 << " : " << whole_level.move_player(dir[0], dir[1]) << "\n\n";
+    //     cout << whole_level;
+    // }
 
-    // long long int tps_dep = get_ms();
-    // vector<string> best_path = find_best_path(whole_level);
-    // long long int tps_fin = get_ms();
+    long long int tps_dep = get_ms();
+    vector<string> best_path = find_best_path(whole_level);
+    long long int tps_fin = get_ms();
 
-    // cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
-    // cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
+    cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
+    cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
 }
