@@ -8,8 +8,8 @@ x . . . . . . . x
 x . . . . . . . x
 x x x x x x x x x
 
-x x x x x
-x . . .-x
-. . 1 p x
+x x b x x
+x . 1 . x
+x . p . x
 x . . . x
 x x x x x

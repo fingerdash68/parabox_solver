@@ -1,6 +1,7 @@
 #pragma optimize("O3")  
 #include <bits/stdc++.h>
 #include <chrono>
+#define DEBUG false
 using namespace std;
 using namespace std::chrono;
 
@@ -23,6 +24,12 @@ const vector<vector<int>> DIR = {
     {0, -1},
 };
 const vector<string> DIR_NAMES = {"S", "N", "E", "W"};
+map<char, int> NAME_TO_NUM_DIR = {
+    {'S', 0},
+    {'N', 1},
+    {'E', 2},
+    {'W', 3},
+};
 
 template <typename T>
 ostream& operator<<(ostream &ost, const vector<T> &tab)
@@ -90,6 +97,8 @@ struct Box
     bool has_player_end;
     bool has_box_end;
     string name;
+    bool is_moving;
+    bool is_forcing;
 
     Box(Type _type, vector<vector<Box*>> _grid, Box* _cont = nullptr, int _lig = -1, int _col = -1, string _name = ""):
         type{_type},
@@ -102,7 +111,9 @@ struct Box
         col{_col},
         has_player_end{false},
         has_box_end{false},
-        name{_name}
+        name{_name},
+        is_moving{false},
+        is_forcing{false}
     {}
 
     Box(Type _type, int height, int width, Box* _cont = nullptr, int _lig = -1, int _col = -1, string _name = ""):
@@ -263,8 +274,13 @@ struct Box
         else Ncol = dcol - 1;
     }
 
-    bool move(int dlig, int dcol)
+    bool move(int dlig, int dcol, int tab = 0)
     {
+        if (DEBUG)
+        {
+            for (int i = 0; i < tab; i++) cout << "|\t";
+            cout << "move " << name << " " << dlig << " " << dcol << " " << (is_moving ? "true" : "false") << endl;
+        }
         if (type == EMPTY || type == WALL) return false;
         Box* Ncontainer = container;
         int Nlig = lig + dlig, Ncol = col + dcol;
@@ -283,13 +299,28 @@ struct Box
                 Ncontainer = infinite_container->container;
             }
         }
-        bool can_enter = enter_cell(Ncontainer, Nlig, Ncol, dlig, dcol);
-        return can_enter;
+        if (!is_moving && !is_forcing)
+        {
+            is_moving = true;
+            bool can_enter = enter_cell(Ncontainer, Nlig, Ncol, dlig, dcol, tab+1);
+            is_moving = false;
+            return can_enter;
+        }
+        else
+        {
+            force_enter_cell(Ncontainer, Nlig, Ncol, dlig, dcol, tab+1);
+            return true;
+        }
     }
 
-    bool enter_cell(Box* box, int Nlig, int Ncol, int dlig, int dcol)
+    bool enter_cell(Box* box, int Nlig, int Ncol, int dlig, int dcol, int tab)
     {
-        bool can_move = box->grid[Nlig][Ncol]->move(dlig, dcol);
+        if (DEBUG)
+        {
+            for (int i = 0; i < tab; i++) cout << "|\t";
+            cout << "enter cell " << name << " " << box->name << " " << Nlig << " " << Ncol << " " << dlig << " " << dcol << endl;
+        }
+        bool can_move = box->grid[Nlig][Ncol]->move(dlig, dcol, tab+1);
         if (box->grid[Nlig][Ncol]->type == WALL) return false;
         if (box->grid[Nlig][Ncol]->type == EMPTY)
         {
@@ -307,25 +338,44 @@ struct Box
             col = Ncol;
             return true;
         }
-        if (box->grid[Nlig][Ncol]->is_enterable())
+        if (container->type != UNIVERSE && !can_move && box->grid[Nlig][Ncol]->is_enterable())
         {
             int NNlig, NNcol;
             box->grid[Nlig][Ncol]->pos_after_enter(dlig, dcol, NNlig, NNcol);
-            bool can_enter = enter_cell(box->grid[Nlig][Ncol], NNlig, NNcol, dlig, dcol);
+            bool can_enter = enter_cell(box->grid[Nlig][Ncol], NNlig, NNcol, dlig, dcol, tab+1);
             if (can_enter) return true;
         }
-        if (is_enterable() && box->grid[Nlig][Ncol]->is_eatable())
+        if (container->type != UNIVERSE && !can_move && is_enterable() && box->grid[Nlig][Ncol]->is_eatable())
         {
             int NNlig, NNcol;
             pos_after_enter(-dlig, -dcol, NNlig, NNcol);
-            bool can_enter = box->grid[Nlig][Ncol]->enter_cell(this, NNlig, NNcol, -dlig, -dcol);
+            bool can_enter = box->grid[Nlig][Ncol]->enter_cell(this, NNlig, NNcol, -dlig, -dcol, tab+1);
             if (can_enter)
             {
-                enter_cell(box, Nlig, Ncol, dlig, dcol);
+                enter_cell(box, Nlig, Ncol, dlig, dcol, tab+1);
                 return true;
             }
         }
-        return false;
+        return can_move;
+    }
+
+    void force_enter_cell(Box* box, int Nlig, int Ncol, int dlig, int dcol, int tab)
+    {
+        if (DEBUG)
+        {
+            for (int i = 0; i < tab; i++) cout << "|\t";
+            cout << "force enter cell " << name << " " << box->name << " " << Nlig << " " << Ncol << " " << dlig << " " << dcol << " " << (is_forcing ? "true" : "false") << endl;
+        }
+        if (!is_forcing) is_forcing = true;
+        else return;
+        Box* next_box = box->grid[Nlig][Ncol];
+        bool next_had_player_end = next_box->has_player_end;
+        bool next_had_box_end = next_box->has_box_end;
+        next_box->move(dlig, dcol, tab+1);
+        box->grid[Nlig][Ncol] = this;
+        has_player_end = next_had_player_end;
+        has_box_end = next_had_box_end;
+        is_forcing = false;
     }
 };
 
@@ -643,16 +693,14 @@ vector<string> find_best_path(Level &level)
     if (level.is_finished()) finish_found = start_hash;
     while (finish_found == -1 && !aFaire.empty())
     {
+        cout << "hash map size : " << dist.size() << endl;
         d++;
         for (long long int hash : aFaire)
         {
-            cout << "current hash : " << hash << endl;
             for (int idir = 0; idir < DIR.size(); idir++)
             {
                 vector<int> dir = DIR[idir];
                 level.set_from_hash(hash);
-                cout << "dir = " << idir << endl;
-                if (idir == 0) cout << level << endl;
                 level.move_player(dir[0], dir[1]);
                 long long int next_hash = level.hash();
                 if (dist.count(next_hash) == 0)
@@ -694,28 +742,19 @@ int main()
 {
     Level whole_level = ask_for_level();
     cout << whole_level;
-    // whole_level.set_from_hash(424213776);
-    // cout << "MOVE 1 : " << whole_level.move_player(0, -1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 2 : " << whole_level.move_player(0, -1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 3 : " << whole_level.move_player(0, -1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 4 : " << whole_level.move_player(0, -1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 5 : " << whole_level.move_player(0, 1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 6 : " << whole_level.move_player(0, 1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 7 : " << whole_level.move_player(0, 1) << "\n\n";
-    // cout << whole_level;
-    // cout << "MOVE 8 : " << whole_level.move_player(0, 1) << "\n\n";
-    // cout << whole_level;
+    string moves = "WWWWSWWNEEEEEEE";
+    for (int i = 0; i < moves.size(); i++)
+    {
+        char move = moves[i];
+        vector<int> dir = DIR[NAME_TO_NUM_DIR[move]];
+        cout << "MOVE " << i+1 << " : " << whole_level.move_player(dir[0], dir[1]) << "\n\n";
+        cout << whole_level;
+    }
 
-    long long int tps_dep = get_ms();
-    vector<string> best_path = find_best_path(whole_level);
-    long long int tps_fin = get_ms();
+    // long long int tps_dep = get_ms();
+    // vector<string> best_path = find_best_path(whole_level);
+    // long long int tps_fin = get_ms();
 
-    cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
-    cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
+    // cout << "BEST PATH (" << best_path.size() << " moves) : " << best_path << "\n";
+    // cout << "Execution time : " << tps_fin - tps_dep << "ms\n";
 }
