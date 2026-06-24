@@ -402,6 +402,20 @@ struct Level
         return player->move(dlig, dcol);
     }
 
+    // Only the useful information for solving
+    long long int compressed_hash() const
+    {
+        long long int h = 0, p = 1;
+        for (Box* box : all_movables)
+        {
+            long long int box_hash = box_to_id_cell.at(box->container);
+            if (box->container->type != Box::UNIVERSE) box_hash += box->container->width() * box->lig + box->col;
+            h += p * box_hash;
+            p *= nb_cells;
+        }
+        return h;
+    }
+
     long long int hash() const
     {
         long long int h = 0, p = 1;
@@ -684,9 +698,9 @@ vector<string> find_best_path(Level &level)
     // BFS
     map<long long int, int> dist, lastdir;
     map<long long int, long long int> last_hash;
-    long long int start_hash = level.hash();
+    long long int start_hash = level.hash(), start_comp_hash = level.compressed_hash();
     vector<long long int> aFaire = {start_hash}, aRajouter;
-    dist[start_hash] = 0;
+    dist[start_comp_hash] = 0;
     lastdir[start_hash] = -1;
     long long int finish_found = -1;
     int d = 0;
@@ -702,10 +716,10 @@ vector<string> find_best_path(Level &level)
                 vector<int> dir = DIR[idir];
                 level.set_from_hash(hash);
                 level.move_player(dir[0], dir[1]);
-                long long int next_hash = level.hash();
-                if (dist.count(next_hash) == 0)
+                long long int next_hash = level.hash(), next_comp_hash = level.compressed_hash();
+                if (dist.count(next_comp_hash) == 0)
                 {
-                    dist[next_hash] = d;
+                    dist[next_comp_hash] = d;
                     lastdir[next_hash] = idir;
                     last_hash[next_hash] = hash;
                     aRajouter.push_back(next_hash);

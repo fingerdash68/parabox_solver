@@ -1,4 +1,14 @@
 x x x x x x x x x
+x . . . . . . . x
+x . . . . . . . x
+x . . . . . . . x
+x . . . B . . . x
+x . . . . . . . x
+x . . . . . . . x
+x . . . . . . . x
+x x x x x x x x x
+
+x x x x x x x x x
 x x x x x x x x x
 x x . . . x x x x
 x x . x b . . x x
