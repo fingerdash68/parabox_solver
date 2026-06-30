@@ -16,3 +16,4 @@ x . . . p . . . x
 x . b . . . . .=x
 x x x x . x x x x
 x x x x . x x x x
+x x x x . x x x x

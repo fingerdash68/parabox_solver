@@ -1,0 +1,21 @@
+x x x x x x x x x
+x . . . . . . . x
+x . . . . . . . x
+x . . . . . . . x
+x . . . B . . . x
+x . . . . . . . x
+x . . . . . . . x
+x . . . . . . . x
+x x x x x x x x x
+
+x x x x x x x
+x . . . . . x
+x . . 1 . . x
+x p . . . . x
+x . . b . . x
+x . . . . . x
+x x x x x x x
+
+x x x
+.-x .=
+x x x
